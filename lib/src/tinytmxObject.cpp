@@ -14,6 +14,8 @@
 #include "tinytmxVector2.hpp"
 #include "tinytmxMap.hpp"
 
+#include "tinytmxUtil.hpp"
+
 namespace tinytmx {
     Object::Object()
             : isTemplate(false),
@@ -77,7 +79,10 @@ namespace tinytmx {
 
             // Let's parse the template.
             tinyxml2::XMLDocument template_doc;
-            template_doc.LoadFile(fileName.c_str());
+
+            std::string contents = ParseXMLFileContents(fileName);
+
+            template_doc.Parse(contents.c_str());
 
             tinyxml2::XMLNode const *mapNode = template_doc.FirstChildElement("template");
 
