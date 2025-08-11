@@ -5,15 +5,13 @@
 #include "tinytmxTileset.hpp"
 #include "tinytmxTileOffset.hpp"
 #include "tinytmxGrid.hpp"
-//#include "tinytmxTerrainArray.hpp" // Deprecated
-//#include "tinytmxTerrain.hpp"
 #include "tinytmxImage.hpp"
 #include "tinytmxTile.hpp"
 #include "tinytmxMap.hpp"
 #include "tinytmxTransformations.hpp"
 #include "tinytmxWangSetArray.hpp"
 #include "tinytmxWangSet.hpp"
-
+#include "tinytmxUtil.hpp"
 
 namespace tinytmx {
     Tileset::Tileset()
@@ -91,10 +89,13 @@ namespace tinytmx {
         tinyxml2::XMLDocument tileset_doc;
         if (source_name) {
             std::string const &fileName = file_path + source_name;
-            tileset_doc.LoadFile(fileName.c_str());
+
+            std::string contents = ParseXMLFileContents(fileName);
+
+            tileset_doc.Parse(contents.c_str());
 
             if (tileset_doc.ErrorID() != 0) {
-                fprintf(stderr, "failed to load tileset file '%s'\n", fileName.c_str());
+                fprintf(stderr, "failed to read tileset file '%s'\n", fileName.c_str());
                 return;
             }
 

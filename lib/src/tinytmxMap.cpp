@@ -7,6 +7,7 @@
 #include "tinytmxObjectGroup.hpp"
 #include "tinytmxImageLayer.hpp"
 #include "tinytmxGroupLayer.hpp"
+#include "tinytmxUtil.hpp"
 
 
 namespace tinytmx {
@@ -82,21 +83,10 @@ namespace tinytmx {
         } else {
             file_path = "";
         }
+        
+        std::string contents = ParseXMLFileContents(fileName);
 
-        // Create a tiny xml document and use it to parse the text.
-        tinyxml2::XMLDocument doc;
-        doc.LoadFile(fileName.c_str());
-
-        // Check for parsing errors.
-        if (doc.Error()) {
-            has_error = true;
-            error_code = static_cast<uint8_t>(MapError::TMX_PARSING_ERROR);
-            error_text = doc.ErrorStr();
-            return;
-        }
-
-        tinyxml2::XMLNode const *mapNode = doc.FirstChildElement("map");
-        Parse(mapNode);
+        ParseText(contents);
     }
 
     void Map::ParseText(std::string const &text) {

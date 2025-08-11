@@ -1,6 +1,8 @@
 #include <cstdlib>
 #include <algorithm>
 #include <cctype>
+#include <fstream>
+#include <sstream>
 
 #ifdef USE_MINIZ
 #include "miniz.h"
@@ -12,6 +14,8 @@
 
 #include "tinytmxUtil.hpp"
 #include "base64.h"
+
+static tinytmx::XmlParseFunc parseFunc = nullptr;
 
 namespace tinytmx {
 
@@ -35,7 +39,7 @@ namespace tinytmx {
         rtrim(s);
     }
 
-    void Util::Trim(std::string &str) {
+    void Trim(std::string &str) {
         trim(str);
     }
 
@@ -62,11 +66,11 @@ namespace tinytmx {
 
 
 
-    std::string Util::DecodeBase64(std::string const &str) {
+    std::string DecodeBase64(std::string const &str) {
         return base64_decode(str);
     }
 
-    char *Util::DecompressGZIP(char const *data, uint32_t dataSize, uint32_t expectedSize) {
+    char *DecompressGZIP(char const *data, uint32_t dataSize, uint32_t expectedSize) {
         uint32_t bufferSize = expectedSize;
         int ret;
         z_stream strm;
@@ -125,4 +129,44 @@ namespace tinytmx {
 
         return out;
     }
+
+    XmlParseFunc TinyTMX_GetParseFunc()
+    {
+        return parseFunc;
+    }
+
+    void TinyTMX_SetParseFunc(XmlParseFunc xpf)
+    {
+        parseFunc = xpf;
+    }
+
+    std::string ParseXMLFileContents(const std::string& path)
+    {
+        XmlParseFunc xpf = TinyTMX_GetParseFunc();
+
+        std::string contents = "";
+
+        if (xpf)
+        {
+            contents = xpf(path);
+        }
+        else
+        {
+            std::ifstream file(path);
+
+            if (!file)
+            {
+                contents = "";
+            }
+            else
+            {
+                std::ostringstream buffer;
+                buffer << file.rdbuf(); // Read the entire file into the buffer
+                contents = buffer.str(); // Convert buffer to string
+            }
+        }
+
+        return contents;
+    }
 }
+

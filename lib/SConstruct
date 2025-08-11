@@ -1,0 +1,49 @@
+import os
+
+env = Environment(tools=['default', 'msvc'])
+
+env.Append(CXXFLAGS=[
+    '/std:c++17',
+    '/O2',
+    '/Os',               # Optimize for speed (generally better than /O1 for size too)
+    '/Ob0',
+    #'/GL',               # Whole program optimization
+    '/DNDEBUG',          # Disable asserts and debug macros
+    '/EHsc',             # Enable standard C++ exceptions (optional, but recommended)
+    '/MT'
+])
+
+env.Append(LINKFLAGS=[
+    '/LTCG',             # Link-time code generation
+    '/OPT:REF',          # Remove unreferenced functions/data
+    '/OPT:ICF',          # Fold identical COMDATs
+    '/DEBUG:NONE'        # Strip debug info (no PDB)
+])
+
+# Version info
+TINYTMX_VERSION_MAJOR = '1'
+TINYTMX_VERSION_MINOR = '1'
+TINYTMX_VERSION_PATCH = '5'
+TINYTMX_VERSION = f"{TINYTMX_VERSION_MAJOR}.{TINYTMX_VERSION_MINOR}.{TINYTMX_VERSION_PATCH}"
+
+print(f"TINYTMX VERSION {TINYTMX_VERSION}")
+
+# Sources for tinytmx library
+tinytmx_sources = Glob("src/*.cpp")
+
+print("Building with miniz")
+env.Append(CPPPATH=['include', 'externals/miniz/'])
+tinytmx_sources.append('externals/miniz/miniz.c')
+env.Append(CPPDEFINES=['USE_MINIZ'])
+
+# TinyXML2 setup: adjust include and lib paths accordingly
+env.Append(CPPPATH=['include', 'externals/tinyxml2/'])  # add your tinyxml2 include path here
+
+tinytmx_sources.append('externals/tinyxml2/tinyxml2.cpp')
+
+dynamic = ARGUMENTS.get("type", "static") == "dynamic"
+
+if dynamic:
+	env.SharedLibrary('build/tinytmx', tinytmx_sources)
+else:
+	env.Library('build/tinytmx', tinytmx_sources)

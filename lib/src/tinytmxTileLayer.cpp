@@ -6,10 +6,9 @@
 #else
 
 #include <zlib.h>
+#include <zstd.h>
 
 #endif
-
-#include <zstd.h>
 
 #include <cstdlib>
 #include <cstdio>
@@ -195,9 +194,9 @@ namespace tinytmx {
 
     void TileLayer::ParseBase64(std::string const &innerText, uint32_t m_width, uint32_t m_height, tinytmx::MapTile *m_tile_map) {
         std::string testText = innerText;
-        Util::Trim(testText);
+        Trim(testText);
 
-        std::string const &text = Util::DecodeBase64(testText);
+        std::string const &text = DecodeBase64(testText);
 
         // Temporary array of gids to be converted to map tiles.
         unsigned *out = nullptr;
@@ -208,15 +207,15 @@ namespace tinytmx {
             out = (unsigned *) malloc(outlen);
             uncompress((Bytef *) out, &outlen, (const Bytef *) text.c_str(), text.size());
 
-        } else if (compression == TileLayerCompressionType::TMX_COMPRESSION_ZSTD) {
+        }/* else if (compression == TileLayerCompressionType::TMX_COMPRESSION_ZSTD) {
             // Use zstd to uncompress the tile layer into the temporary array of tiles.
             uLongf outlen = m_width * m_height * 4;
             out = (unsigned *) malloc(outlen);
             ZSTD_decompress(out, outlen, text.c_str(), text.size());
 
-        } else if (compression == TileLayerCompressionType::TMX_COMPRESSION_GZIP) {
+        }*/ else if (compression == TileLayerCompressionType::TMX_COMPRESSION_GZIP) {
             // Use the utility class for decompressing (which uses zlib)
-            out = (unsigned *) Util::DecompressGZIP(text.c_str(), text.size(), m_width * m_height * 4);
+            out = (unsigned *) DecompressGZIP(text.c_str(), text.size(), m_width * m_height * 4);
         } else {
             out = (unsigned *) malloc(text.size());
 
