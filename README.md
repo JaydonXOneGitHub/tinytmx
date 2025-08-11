@@ -36,7 +36,7 @@ This describes the installation process using cmake. As pre-requisites, you'll n
 
 ```bash
 # Check out the library.
-$ git clone https://github.com/KaseyJenkins/tinytmx.git
+$ git clone https://github.com/JaydonXOne/tinytmx.git
 # Go to the library root directory
 $ cd tinytmx
 # Make a build directory to place the build output.
@@ -81,8 +81,7 @@ Optionally, set your own parser if you need:
 #include <fstream>
 #include "tinytmxUtil.hpp"
 
-static std::string customParse(const std::string& path)
-{
+static std::string customParse(const std::string& path) {
     std::ifstream file(path);
 
     std::string contents = "";
@@ -103,6 +102,7 @@ static std::string customParse(const std::string& path)
 
 int main(int argc, char * argv[]) {
     
+    tinytmx::TinyTMX_SetParseFunc(customParse);
     tinytmx::Map *map = new tinytmx::Map();
     std::string fileName = "assets/FiniteOrthogonalMap.tmx";
     map->ParseFile(fileName);
@@ -133,3 +133,8 @@ Either way, link to the library as follows.
 ```cmake
 target_link_libraries(MyTarget tinytmx::tinytmx)
 ```
+
+### Usage with SCons
+Run the `scons` command in the `lib` folder.<br>
+That's it.<br><br>
+You can edit the script if you need to.
