@@ -72,6 +72,44 @@ int main(int argc, char * argv[]) {
     
 }
 ```
+
+Optionally, set your own parser if you need:
+
+```c++
+#include <string>
+#include "tinytmx.hpp"
+#include <fstream>
+#include "tinytmxUtil.hpp"
+
+static std::string customParse(const std::string& path)
+{
+    std::ifstream file(path);
+
+    std::string contents = "";
+
+    if (!file)
+    {
+        contents = "";
+    }
+    else
+    {
+        std::ostringstream buffer;
+        buffer << file.rdbuf(); // Read the entire file into the buffer
+        contents = buffer.str(); // Convert buffer to string
+    }
+
+    return contents;
+}
+
+int main(int argc, char * argv[]) {
+    
+    tinytmx::Map *map = new tinytmx::Map();
+    std::string fileName = "assets/FiniteOrthogonalMap.tmx";
+    map->ParseFile(fileName);
+    
+}
+```
+
 ### Usage with CMake
 
 If using CMake, it is recommended to link against the project-provided
