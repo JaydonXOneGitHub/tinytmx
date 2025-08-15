@@ -1,24 +1,90 @@
 import os
+from SCons.Script import ARGUMENTS, Environment, Glob
 
-env = Environment(tools=['default', 'msvc'])
+target_platform: str = ARGUMENTS.get("platform", "msvc")  # can be 'msvc' or 'wasm'
+dynamic: bool = ARGUMENTS.get("type", "static") == "dynamic"
 
-env.Append(CXXFLAGS=[
-    '/std:c++17',
-    '/O2',
-    '/Os',               # Optimize for speed (generally better than /O1 for size too)
-    '/Ob0',
-    #'/GL',               # Whole program optimization
-    '/DNDEBUG',          # Disable asserts and debug macros
-    '/EHsc',             # Enable standard C++ exceptions (optional, but recommended)
-    '/MT'
-])
+def get_include_flags(includes: list[str]) -> str:
+    return ' '.join(f'-I{p}' for p in includes)
 
-env.Append(LINKFLAGS=[
-    '/LTCG',             # Link-time code generation
-    '/OPT:REF',          # Remove unreferenced functions/data
-    '/OPT:ICF',          # Fold identical COMDATs
-    '/DEBUG:NONE'        # Strip debug info (no PDB)
-])
+def get_define_flags(defines: list[str]) -> str:
+    return ' '.join(f'-D{p}' for p in defines)
+
+def get_msvc_environment() -> Environment:
+    print("Building for MSVC")
+
+    msvc_env: Environment = Environment(
+        tools=['default', 'msvc']
+    )
+    msvc_env.Append(CXXFLAGS=[
+        '/std:c++17',
+        '/O2',
+        '/Os',
+        '/Ob0',
+        '/DNDEBUG',
+        '/EHsc',
+        '/MT'
+    ])
+    msvc_env.Append(LINKFLAGS=[
+        '/LTCG',
+        '/OPT:REF',
+        '/OPT:ICF',
+        '/DEBUG:NONE'
+    ])
+
+    msvc_env.Append(CPPPATH=['include', 'externals/miniz/'])
+    
+    msvc_env.Append(CPPDEFINES=['USE_MINIZ', 'MSVC'])
+
+    # TinyXML2 setup
+    msvc_env.Append(CPPPATH=['include', 'externals/tinyxml2/'])
+
+    return msvc_env
+
+def get_wasm_environment() -> Environment:
+    import os
+
+    print("Building for Emscripten (WASM)")
+
+    wasm_env: Environment = Environment(
+        tools=['emscripten'],
+        CC='emcc',
+        CXX='em++',
+        LINK='em++',
+        AR='emar',
+        RANLIB='emranlib',
+        ENV=os.environ  # inherit PATH so em++ is found
+    )
+
+    # Compiler/linker flags
+    wasm_env.Append(CXXFLAGS=[
+        '-std=c++17',
+        '-O2',
+        '-DNDEBUG',
+        '-fPIC',
+        '-sUSE_SDL=0',
+    ])
+
+    wasm_env.Append(CPPDEFINES=['USE_MINIZ', 'EMSCRIPTEN'])
+    wasm_env.Append(CPPPATH=[
+        'include', 
+        'externals/miniz', 
+        'externals/tinyxml2'
+    ])
+    wasm_env.Append(LINKFLAGS=['-sWASM=1', '-O2'])
+
+    return wasm_env
+
+def get_environment() -> Environment:
+    if target_platform == "wasm":
+        return get_wasm_environment()
+    elif target_platform == "msvc":
+        return get_msvc_environment()
+    else:
+        return Environment()
+
+env: Environment = get_environment()
+
 
 # Version info
 TINYTMX_VERSION_MAJOR = '1'
@@ -29,21 +95,36 @@ TINYTMX_VERSION = f"{TINYTMX_VERSION_MAJOR}.{TINYTMX_VERSION_MINOR}.{TINYTMX_VER
 print(f"TINYTMX VERSION {TINYTMX_VERSION}")
 
 # Sources for tinytmx library
-tinytmx_sources = Glob("src/*.cpp")
 
 print("Building with miniz")
-env.Append(CPPPATH=['include', 'externals/miniz/'])
-tinytmx_sources.append('externals/miniz/miniz.c')
-env.Append(CPPDEFINES=['USE_MINIZ'])
 
-# TinyXML2 setup: adjust include and lib paths accordingly
-env.Append(CPPPATH=['include', 'externals/tinyxml2/'])  # add your tinyxml2 include path here
+if target_platform == "wasm":
+    env['CPPINCPATHS'] = get_include_flags(env['CPPPATH'])
+    env['MYCPPDEFINELIST'] = get_define_flags(env['CPPDEFINES'])
 
-tinytmx_sources.append('externals/tinyxml2/tinyxml2.cpp')
+    print(env.subst('$CPPINCPATHS'))
 
-dynamic = ARGUMENTS.get("type", "static") == "dynamic"
+    tinytmx_sources: list = Glob("src/*.cpp")
+    tinytmx_sources.append(env.File('../lib/externals/miniz/miniz.cpp'))
+    tinytmx_sources.append(env.File('../lib/externals/tinyxml2/tinyxml2.cpp'))
 
+    if len(tinytmx_sources) < 3:
+        raise ValueError("Not enough files have been included.")
+
+elif target_platform == "msvc":
+    tinytmx_sources = Glob("src/*.cpp")
+    tinytmx_sources.append('externals/miniz/miniz.cpp')
+    tinytmx_sources.append('externals/tinyxml2/tinyxml2.cpp')
+
+# Build library
 if dynamic:
-	env.SharedLibrary('build/tinytmx', tinytmx_sources)
+    print("Building dynamic library")
+    env.SharedLibrary('build/tinytmx', tinytmx_sources)
 else:
-	env.Library('build/tinytmx', tinytmx_sources)
+    objs: list = []
+
+    for src in tinytmx_sources:
+        objs.append(env.Object(src))
+
+    print("Building static library")
+    env.StaticLibrary('build/tinytmx', objs)
